@@ -1,21 +1,49 @@
+# Dependencies
 */node_modules/
+node_modules/
+
+# Build outputs
 */dist/
+dist/
+
+# Coverage reports
 */coverage/
+coverage/
+
+# Environment files
+.env
+.env.local
+.env.*.local
 */.env
 */.env.local
+
+# OS files
+.DS_Store
 */.DS_Store
+
+# IDE files
+.vscode/
+.idea/
 */.vscode/
 */.idea/
-*/.gitignore
-*/.gitattributes
+
+# Docker files
+.dockerignore
 */.dockerignore
+.docker/
 */.docker/
+
+# Yarn files
+.yarn/
+.yarnrc.yml
+.yarnrc
 */.yarn/
 */.yarnrc.yml
 */.yarnrc
-*/.yarnrc.yml
-*/.yarnrc
-*/.yarnrc.yml
-*/.yarnrc
 
-node_modules
+# Git files
+.gitignore
+.gitattributes
+*/.gitignore
+*/.gitattributes
+.env
