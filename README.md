@@ -29,6 +29,27 @@
   - PixiJS 角色关系网络可视化
   - WebSocket 实时游戏体验
 
+## 🚀 快速启动
+
+### 一键启动（推荐）
+
+```bash
+# macOS/Linux
+chmod +x start.sh
+./start.sh
+
+# Windows
+start.bat
+```
+
+### 详细启动指南
+查看 [STARTUP_GUIDE.md](./STARTUP_GUIDE.md) 获取完整的启动说明和故障排除。
+
+### 访问地址
+- 🎮 **游戏前端**: http://localhost:3000
+- 🔧 **后端API**: http://localhost:3001
+- 🗄️ **Neo4j浏览器**: http://localhost:7474 (neo4j/password)
+
 ## 项目概述
 
 这是一款基于AI大语言模型驱动的回合制网页游戏，背景设定在1980年的深圳经济特区初创时期。玩家将扮演一名商业人士，在这个充满机遇与挑战的时代背景下，与50个各具特色的NPC角色互动，体验改革开放初期的商业风云。

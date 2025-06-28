@@ -5,11 +5,18 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        - https_proxy=http://192.168.0.104:7890
+        - http_proxy=http://192.168.0.104:7890
+        - all_proxy=socks5://192.168.0.104:7890
     ports:
       - "3000:3000"
     environment:
       - VITE_API_URL=http://localhost:3001
       - VITE_WS_URL=ws://localhost:3001
+      - https_proxy=http://192.168.0.104:7890
+      - http_proxy=http://192.168.0.104:7890
+      - all_proxy=socks5://192.168.0.104:7890
     depends_on:
       - backend
     volumes:
@@ -22,6 +29,10 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      args:
+        - https_proxy=http://192.168.0.104:7890
+        - http_proxy=http://192.168.0.104:7890
+        - all_proxy=socks5://192.168.0.104:7890
     ports:
       - "3001:3001"
     environment:
@@ -35,6 +46,9 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - LANGCHAIN_TRACING_V2=${LANGCHAIN_TRACING_V2}
       - LANGCHAIN_API_KEY=${LANGCHAIN_API_KEY}
+      - https_proxy=http://192.168.0.104:7890
+      - http_proxy=http://192.168.0.104:7890
+      - all_proxy=socks5://192.168.0.104:7890
     depends_on:
       - mongodb
       - neo4j
