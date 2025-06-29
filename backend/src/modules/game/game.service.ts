@@ -324,6 +324,10 @@ export class GameService {
       // 广播回合结果
       await this.gameGateway.broadcastRoundResult(gameId, roundResult);
 
+      // 7.5. 获取并广播更新后的游戏状态
+      const updatedGameState = await this.getCurrentGameState(gameId);
+      await this.gameGateway.broadcastGameStateUpdate(gameId, updatedGameState);
+
       // 8. 检查游戏结束条件
       await this.checkGameEndConditions(gameId);
 
@@ -448,8 +452,81 @@ export class GameService {
    * 初始化AI角色状态
    */
   private async initializeAICharacterStates(): Promise<any> {
-    // TODO: 从角色服务获取所有角色并初始化状态
-    return {};
+    // 创建初始AI角色状态
+    return {
+      'ai_character_1': {
+        characterId: 'ai_character_1',
+        name: '李明',
+        profession: '商人',
+        type: 'businessman',
+        money: 80000,
+        reputation: 60,
+        influence: 40,
+        actionPoints: 10,
+        resources: {},
+        properties: [],
+        businesses: [],
+        relationships: {},
+        personality: {
+          openness: 0.6,
+          conscientiousness: 0.7,
+          extraversion: 0.8,
+          agreeableness: 0.5,
+          ambition: 0.9,
+          riskTolerance: 0.7,
+        },
+        currentGoals: ['扩大商业版图', '建立政商关系'],
+        mood: 'optimistic',
+      },
+      'ai_character_2': {
+        characterId: 'ai_character_2',
+        name: '王芳',
+        profession: '政府官员',
+        type: 'government',
+        money: 50000,
+        reputation: 80,
+        influence: 70,
+        actionPoints: 10,
+        resources: {},
+        properties: [],
+        businesses: [],
+        relationships: {},
+        personality: {
+          openness: 0.4,
+          conscientiousness: 0.9,
+          extraversion: 0.6,
+          agreeableness: 0.7,
+          ambition: 0.6,
+          riskTolerance: 0.3,
+        },
+        currentGoals: ['维护社会稳定', '推动经济发展'],
+        mood: 'cautious',
+      },
+      'ai_character_3': {
+        characterId: 'ai_character_3',
+        name: '张伟',
+        profession: '知识分子',
+        type: 'intellectual',
+        money: 30000,
+        reputation: 70,
+        influence: 50,
+        actionPoints: 10,
+        resources: {},
+        properties: [],
+        businesses: [],
+        relationships: {},
+        personality: {
+          openness: 0.9,
+          conscientiousness: 0.8,
+          extraversion: 0.4,
+          agreeableness: 0.8,
+          ambition: 0.5,
+          riskTolerance: 0.4,
+        },
+        currentGoals: ['传播知识', '推动社会进步'],
+        mood: 'thoughtful',
+      },
+    };
   }
 
   /**

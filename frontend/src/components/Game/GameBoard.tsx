@@ -273,6 +273,37 @@ const GameBoard: React.FC = () => {
                   <ResultValue>{lastRoundResult.relationshipChanges?.length || 0}</ResultValue>
                 </ResultItem>
               </ResultGrid>
+
+              {/* AI行动详情 */}
+              {lastRoundResult.aiActions && lastRoundResult.aiActions.length > 0 && (
+                <div style={{ marginTop: '1rem' }}>
+                  <Card.Title style={{ fontSize: '1rem', marginBottom: '0.5rem' }}>AI角色行动</Card.Title>
+                  {lastRoundResult.aiActions.map((aiAction, index) => (
+                    <div key={index} style={{
+                      padding: '0.75rem',
+                      marginBottom: '0.5rem',
+                      backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                      borderRadius: '4px',
+                      border: '1px solid rgba(0, 0, 0, 0.1)'
+                    }}>
+                      <div style={{
+                        fontWeight: 'bold',
+                        marginBottom: '0.25rem',
+                        color: '#2c3e50'
+                      }}>
+                        {aiAction.characterId}: {aiAction.action?.actionName || '未知行动'}
+                      </div>
+                      <div style={{
+                        fontSize: '0.9rem',
+                        color: '#666',
+                        fontStyle: 'italic'
+                      }}>
+                        {aiAction.reasoning || '无推理信息'}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </Card.Content>
           </RoundResultPanel>
         )}
