@@ -8,7 +8,7 @@ import {
   MessageBody,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { UseGuards } from '@nestjs/common';
+import { UseGuards, Inject, forwardRef } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { GameService } from './game.service';
 
@@ -27,7 +27,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   private connectedClients = new Map<string, { socket: Socket; gameId?: string; userId?: string }>();
 
-  constructor(private readonly gameService: GameService) {}
+  constructor(@Inject(forwardRef(() => GameService)) private readonly gameService: GameService) {}
 
   handleConnection(client: Socket) {
     console.log(`Client connected: ${client.id}`);

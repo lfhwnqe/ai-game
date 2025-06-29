@@ -24,6 +24,13 @@ interface GameStoreState {
   isLoading: boolean;
   error: string | null;
   selectedAction: GameAction | null;
+  notifications: Array<{
+    id: string;
+    type: 'success' | 'error' | 'warning' | 'info';
+    title: string;
+    message: string;
+    timestamp: number;
+  }>;
   
   // 操作方法
   createGame: (config: {
@@ -43,9 +50,18 @@ interface GameStoreState {
   setAvailableActions: (actions: GameAction[]) => void;
   setSelectedAction: (action: GameAction | null) => void;
   setProcessing: (isProcessing: boolean) => void;
-  
+
   // 工具方法
   clearError: () => void;
+
+  // 通知管理
+  addNotification: (notification: {
+    type: 'success' | 'error' | 'warning' | 'info';
+    title: string;
+    message: string;
+  }) => void;
+  removeNotification: (id: string) => void;
+  clearNotifications: () => void;
   reset: () => void;
   loadGameHistory: () => Promise<void>;
 }
@@ -65,6 +81,7 @@ export const useGameStore = create<GameStoreState>()(
         isLoading: false,
         error: null,
         selectedAction: null,
+        notifications: [],
 
         // 创建新游戏
         createGame: async (config) => {
@@ -174,36 +191,36 @@ export const useGameStore = create<GameStoreState>()(
           set({ isProcessing: true, error: null });
           
           try {
-            const result = await gameService.submitPlayerAction(currentGame.gameId, action);
-            
+            const playerAction = await gameService.submitPlayerAction(currentGame.gameId, action);
+
             // 更新游戏状态
             const updatedGameState = await gameService.getGameState(currentGame.gameId);
             const availableActions = await gameService.getAvailableActions(currentGame.gameId);
-            
+
             set({
               gameState: updatedGameState,
               availableActions,
-              lastRoundResult: result,
+              // 不要设置 lastRoundResult，等待 WebSocket 回合结果
               isProcessing: false,
               selectedAction: null,
               error: null,
             });
-            
+
             // 添加到行动历史
             const actionHistory = get().actionHistory;
             set({
               actionHistory: [
                 ...actionHistory,
                 {
-                  roundNumber: result.roundNumber,
+                  roundNumber: updatedGameState.currentRound,
                   action,
                   timestamp: new Date().toISOString(),
-                  result,
+                  result: playerAction,
                 },
               ],
             });
-            
-            console.log('行动提交成功:', result);
+
+            console.log('行动提交成功:', playerAction);
           } catch (error: any) {
             set({
               isProcessing: false,
@@ -350,10 +367,10 @@ export const useGameStore = create<GameStoreState>()(
         // 加载游戏历史
         loadGameHistory: async () => {
           set({ isLoading: true, error: null });
-          
+
           try {
             const games = await gameService.getUserGames();
-            
+
             set({
               gameHistory: games,
               isLoading: false,
@@ -364,9 +381,38 @@ export const useGameStore = create<GameStoreState>()(
               isLoading: false,
               error: error.message || '加载游戏历史失败',
             });
-            
+
             console.error('加载游戏历史失败:', error);
           }
+        },
+
+        // 通知管理
+        addNotification: (notification) => {
+          const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+          const newNotification = {
+            ...notification,
+            id,
+            timestamp: Date.now(),
+          };
+
+          set((state) => ({
+            notifications: [...state.notifications, newNotification],
+          }));
+
+          // 自动移除通知（5秒后）
+          setTimeout(() => {
+            get().removeNotification(id);
+          }, 5000);
+        },
+
+        removeNotification: (id) => {
+          set((state) => ({
+            notifications: state.notifications.filter(n => n.id !== id),
+          }));
+        },
+
+        clearNotifications: () => {
+          set({ notifications: [] });
         },
       }),
       {

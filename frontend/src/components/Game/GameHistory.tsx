@@ -5,9 +5,11 @@ import { Card } from '../UI/Card';
 import { Button } from '../UI/Button';
 
 const HistoryContainer = styled(Card)`
-  height: 300px;
+  flex: 1;
   display: flex;
   flex-direction: column;
+  min-height: 0; /* 确保容器可以收缩 */
+  max-height: 400px; /* 限制最大高度 */
 `;
 
 const HistoryContent = styled.div`

@@ -47,11 +47,14 @@ const ContentArea = styled.main`
 
 const ContentWrapper = styled.div`
   flex: 1;
-  overflow: auto;
+  overflow: hidden; /* 改为hidden避免滚动条 */
   position: relative;
   z-index: 2;
   padding: ${({ theme }) => theme.spacing.md};
-  
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* 确保容器可以收缩 */
+
   @media (max-width: ${({ theme }) => theme.breakpoints.tablet}) {
     padding: ${({ theme }) => theme.spacing.sm};
   }

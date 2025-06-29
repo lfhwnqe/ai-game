@@ -54,9 +54,9 @@ export const gameService = {
   },
 
   // 提交玩家行动
-  submitPlayerAction: async (gameId: string, action: PlayerAction): Promise<RoundResult> => {
+  submitPlayerAction: async (gameId: string, action: PlayerAction): Promise<PlayerAction> => {
     try {
-      const response = await api.post<RoundResult>(`/games/${gameId}/actions`, action);
+      const response = await api.post<PlayerAction>(`/games/${gameId}/actions`, action);
       console.log('行动提交成功:', response);
       return response;
     } catch (error) {

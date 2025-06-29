@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { ConfigService } from '@nestjs/config';
@@ -20,6 +20,7 @@ export class GameService {
     private charactersService: CharactersService,
     private aiService: AiService,
     private configService: ConfigService,
+    @Inject(forwardRef(() => GameGateway)) private gameGateway: GameGateway,
   ) {}
 
   /**
@@ -121,20 +122,32 @@ export class GameService {
    * 将后端游戏状态格式化为前端期望的格式
    */
   private formatGameStateForFrontend(gameState: any): any {
+    // 安全获取玩家状态，提供默认值
+    const playerState = gameState.playerState || {
+      money: 100000,
+      reputation: 50,
+      influence: 0,
+      actionPoints: 10,
+      resources: {},
+      properties: [],
+      businesses: [],
+      relationships: {},
+    };
+
     return {
       gameId: gameState.gameId,
-      currentRound: gameState.round,
+      currentRound: gameState.round || 1,
       playerCharacter: {
         characterId: 'player',
         name: '玩家',
         type: 'player',
         resources: {
-          money: gameState.playerState.money,
-          reputation: gameState.playerState.reputation,
+          money: playerState.money || 100000,
+          reputation: playerState.reputation || 50,
           health: 100, // 默认值
-          connections: Object.keys(gameState.playerState.relationships || {}).length,
+          connections: Object.keys(playerState.relationships || {}).length,
         },
-        relationships: gameState.playerState.relationships || {},
+        relationships: playerState.relationships || {},
         status: 'active',
         location: '深圳',
         description: '1980年代的创业者',
@@ -283,7 +296,35 @@ export class GameService {
         }
       ).exec();
 
-      // 7. 检查游戏结束条件
+      // 7. 创建并广播回合结果
+      const roundResult = {
+        roundNumber: playerAction.round,
+        playerAction: {
+          actionId: playerAction.actionId,
+          actionType: playerAction.actionType,
+          actionName: playerAction.actionName,
+          actionData: playerAction.actionData
+        },
+        aiActions: aiActions.map(action => ({
+          characterId: action.characterId,
+          action: {
+            actionId: action.actionId,
+            actionType: action.actionType,
+            actionName: action.actionName,
+            actionData: action.actionData
+          },
+          reasoning: action.reasoning || '基于当前情况的最佳选择'
+        })),
+        events: actionResults.eventChanges || [],
+        marketChanges: actionResults.marketChanges || { condition: 'stable', factors: [] },
+        characterUpdates: actionResults.characterUpdates || [],
+        relationshipChanges: actionResults.relationshipChanges || []
+      };
+
+      // 广播回合结果
+      await this.gameGateway.broadcastRoundResult(gameId, roundResult);
+
+      // 8. 检查游戏结束条件
       await this.checkGameEndConditions(gameId);
 
     } catch (error) {
@@ -306,10 +347,10 @@ export class GameService {
       gameId,
       round: 1,
       playerState: {
-        money: this.configService.get<number>('game.balance.initialMoney'),
-        reputation: this.configService.get<number>('game.balance.initialReputation'),
+        money: this.configService.get<number>('game.balance.initialMoney') || 100000,
+        reputation: this.configService.get<number>('game.balance.initialReputation') || 50,
         influence: 0,
-        actionPoints: this.configService.get<number>('game.balance.maxActionPoints'),
+        actionPoints: this.configService.get<number>('game.balance.maxActionPoints') || 10,
         resources: {},
         properties: [],
         businesses: [],
@@ -622,7 +663,7 @@ export class GameService {
     }
 
     // 计算全局影响
-    const totalBusinessActions = aiResults.filter(r => r.actionId.includes('business')).length;
+    const totalBusinessActions = aiResults.filter(r => r?.actionId && r.actionId.includes('business')).length;
     if (totalBusinessActions > 3) {
       stateChanges.globalEffects.marketVolatility = 0.1;
     }
@@ -634,11 +675,23 @@ export class GameService {
    * 计算市场变化
    */
   private calculateMarketChanges(gameState: GameState, allActions: any[]): any {
-    const marketChanges = {
+    // 安全获取市场状态，提供默认值
+    const currentMarketState = gameState.marketState || {
       stockPrices: {},
       commodityPrices: {},
-      interestRates: gameState.marketState.interestRates,
-      inflationRate: gameState.marketState.inflationRate,
+      realEstatePrices: {},
+      interestRates: 0.05,
+      inflationRate: 0.03,
+      economicIndicators: {},
+    };
+
+    const marketChanges = {
+      stockPrices: { ...currentMarketState.stockPrices },
+      commodityPrices: { ...currentMarketState.commodityPrices },
+      realEstatePrices: { ...currentMarketState.realEstatePrices },
+      interestRates: currentMarketState.interestRates || 0.05,
+      inflationRate: currentMarketState.inflationRate || 0.03,
+      economicIndicators: { ...currentMarketState.economicIndicators },
     };
 
     // 根据行动数量影响市场
@@ -651,6 +704,10 @@ export class GameService {
     // 随机市场波动
     marketChanges.inflationRate += (Math.random() - 0.5) * 0.002;
 
+    // 确保利率和通胀率在合理范围内
+    marketChanges.interestRates = Math.max(0.01, Math.min(0.15, marketChanges.interestRates));
+    marketChanges.inflationRate = Math.max(-0.02, Math.min(0.10, marketChanges.inflationRate));
+
     return marketChanges;
   }
 
@@ -660,8 +717,12 @@ export class GameService {
   private async generateNewEvents(gameId: string, gameState: GameState, results: any): Promise<any[]> {
     const newEvents = [];
 
+    // 安全检查结果对象
+    const playerResult = results?.playerActionResult || {};
+    const playerEffects = playerResult.effects || {};
+
     // 基于行动结果生成事件
-    if (results.playerActionResult.success && results.playerActionResult.effects.businessGrowth) {
+    if (playerResult.success && playerEffects.businessGrowth) {
       newEvents.push({
         eventId: `event_${Date.now()}`,
         type: 'market',
@@ -695,7 +756,10 @@ export class GameService {
   private async generateNews(actionResults: any): Promise<any[]> {
     const news = [];
 
-    if (actionResults.playerActionResult.success) {
+    // 安全检查
+    const playerResult = actionResults?.playerActionResult || {};
+
+    if (playerResult.success) {
       news.push({
         newsId: `news_${Date.now()}`,
         headline: '本地企业家投资成功',
@@ -714,27 +778,62 @@ export class GameService {
    */
   private async updateGameState(gameId: string, actionResults: any): Promise<void> {
     const game = await this.getGame(gameId);
-    const currentState = await this.getCurrentGameState(gameId);
 
-    // 更新玩家状态
-    const newPlayerState = { ...currentState.playerState };
-    Object.assign(newPlayerState, actionResults.stateChanges.playerStateChanges);
+    // 直接从数据库获取原始游戏状态，而不是格式化后的数据
+    const currentState = await this.gameStateModel
+      .findOne({ gameId, round: game.currentRound })
+      .exec();
+
+    if (!currentState) {
+      throw new NotFoundException(`Game state not found for game ${gameId}, round ${game.currentRound}`);
+    }
+
+    // 更新玩家状态，确保有默认值
+    const defaultPlayerState = {
+      money: 100000,
+      reputation: 50,
+      influence: 0,
+      actionPoints: 10,
+      resources: {},
+      properties: [],
+      businesses: [],
+      relationships: {},
+    };
+    const newPlayerState = { ...defaultPlayerState, ...currentState.playerState };
+    if (actionResults.stateChanges?.playerStateChanges) {
+      Object.assign(newPlayerState, actionResults.stateChanges.playerStateChanges);
+    }
 
     // 更新AI角色状态
     const newAIStates = { ...currentState.aiCharacterStates };
-    Object.assign(newAIStates, actionResults.stateChanges.aiStateChanges);
+    if (actionResults.stateChanges?.aiStateChanges) {
+      Object.assign(newAIStates, actionResults.stateChanges.aiStateChanges);
+    }
 
-    // 更新市场状态
-    const newMarketState = { ...currentState.marketState };
-    Object.assign(newMarketState, actionResults.marketChanges);
+    // 更新市场状态，确保有默认值
+    const defaultMarketState = {
+      stockPrices: {},
+      commodityPrices: {},
+      realEstatePrices: {},
+      interestRates: 0.05,
+      inflationRate: 0.03,
+      economicIndicators: {},
+    };
+    const newMarketState = { ...defaultMarketState, ...currentState.marketState };
+    if (actionResults.marketChanges) {
+      Object.assign(newMarketState, actionResults.marketChanges);
+    }
 
     // 创建新的游戏状态
+    const currentActiveEvents = Array.isArray(currentState.activeEvents) ? currentState.activeEvents : [];
+    const newEventChanges = Array.isArray(actionResults.eventChanges) ? actionResults.eventChanges : [];
+
     const newGameState = new this.gameStateModel({
       gameId,
       round: game.currentRound + 1,
       playerState: newPlayerState,
       marketState: newMarketState,
-      activeEvents: [...currentState.activeEvents, ...actionResults.eventChanges],
+      activeEvents: [...currentActiveEvents, ...newEventChanges],
       availableActions: await this.generateAvailableActions(gameId, game.currentRound + 1),
       recentNews: await this.generateNews(actionResults),
       aiCharacterStates: newAIStates,

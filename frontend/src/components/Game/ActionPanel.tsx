@@ -1,154 +1,132 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
-import { useAtom } from 'jotai';
 import { useGameStore } from '../../stores/gameStore';
-import {
-  addNotificationAtom
-} from '../../atoms/gameAtoms';
 import { Card } from '../UI/Card';
 import { Button } from '../UI/Button';
 import { PlayerAction, GameAction } from '../../types';
 
 const ActionContainer = styled(Card)`
-  padding: ${({ theme }) => theme.spacing.md};
-  height: fit-content;
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* 确保容器可以收缩 */
+  flex: 1; /* 占满可用高度 */
+  overflow: hidden;
 `;
 
 const ActionList = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${({ theme }) => theme.spacing.sm};
-  max-height: 300px;
-  overflow-y: auto;
   margin-bottom: ${({ theme }) => theme.spacing.md};
+  max-height: 200px;
+  overflow-y: auto;
+  flex-shrink: 0;
 `;
 
 const ActionItem = styled.button<{ selected?: boolean }>`
   padding: ${({ theme }) => theme.spacing.sm};
-  background: ${({ selected, theme }) => 
+  background: ${({ selected, theme }) =>
     selected ? theme.colors.primary + '20' : theme.colors.background.tertiary
   };
-  border: 2px solid ${({ selected, theme }) => 
+  border: 2px solid ${({ selected, theme }) =>
     selected ? theme.colors.primary : theme.colors.border.primary
   };
   border-radius: ${({ theme }) => theme.borderRadius.sm};
   text-align: left;
   cursor: pointer;
   transition: all ${({ theme }) => theme.animations.duration.normal};
-  
+
   &:hover {
     border-color: ${({ theme }) => theme.colors.primary};
     background: ${({ theme }) => theme.colors.primary}10;
   }
-  
+
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
   }
 `;
 
-const ActionName = styled.div`
-  font-size: ${({ theme }) => theme.fonts.sizes.md};
-  font-weight: ${({ theme }) => theme.fonts.weights.bold};
-  color: ${({ theme }) => theme.colors.text.primary};
+const ActionType = styled.div<{ type: string }>`
+  font-size: 0.8rem;
+  font-weight: bold;
+  color: ${({ type, theme }) => {
+    switch (type) {
+      case 'business': return theme.colors.success;
+      case 'social': return theme.colors.info;
+      case 'political': return theme.colors.warning;
+      case 'personal': return theme.colors.primary;
+      default: return theme.colors.text.muted;
+    }
+  }};
   margin-bottom: ${({ theme }) => theme.spacing.xs};
+  text-transform: uppercase;
+`;
+
+const ActionName = styled.div`
+  font-weight: bold;
+  margin-bottom: ${({ theme }) => theme.spacing.xs};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const ActionDescription = styled.div`
-  font-size: ${({ theme }) => theme.fonts.sizes.sm};
-  color: ${({ theme }) => theme.colors.text.secondary};
+  font-size: 0.9rem;
+  color: ${({ theme }) => theme.colors.text.muted};
   line-height: 1.4;
 `;
 
-const ActionType = styled.span<{ type: string }>`
-  display: inline-block;
-  padding: ${({ theme }) => theme.spacing.xs} ${({ theme }) => theme.spacing.sm};
-  background: ${({ type, theme }) => {
-    switch (type) {
-      case 'business':
-        return theme.colors.game.money + '20';
-      case 'social':
-        return theme.colors.game.connections + '20';
-      case 'personal':
-        return theme.colors.game.health + '20';
-      case 'investment':
-        return theme.colors.game.reputation + '20';
-      default:
-        return theme.colors.background.tertiary;
-    }
-  }};
-  color: ${({ type, theme }) => {
-    switch (type) {
-      case 'business':
-        return theme.colors.game.money;
-      case 'social':
-        return theme.colors.game.connections;
-      case 'personal':
-        return theme.colors.game.health;
-      case 'investment':
-        return theme.colors.game.reputation;
-      default:
-        return theme.colors.text.secondary;
-    }
-  }};
-  border-radius: ${({ theme }) => theme.borderRadius.sm};
-  font-size: ${({ theme }) => theme.fonts.sizes.xs};
-  font-weight: ${({ theme }) => theme.fonts.weights.bold};
-  text-transform: uppercase;
-  margin-bottom: ${({ theme }) => theme.spacing.xs};
-`;
-
 const ActionDetails = styled.div`
-  margin-top: ${({ theme }) => theme.spacing.md};
   padding: ${({ theme }) => theme.spacing.md};
-  background: ${({ theme }) => theme.colors.background.tertiary};
-  border: 1px solid ${({ theme }) => theme.colors.border.primary};
+  background: ${({ theme }) => theme.colors.background.secondary};
   border-radius: ${({ theme }) => theme.borderRadius.sm};
+  margin-bottom: ${({ theme }) => theme.spacing.md};
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 `;
 
 const ReasoningInput = styled.textarea`
   width: 100%;
-  min-height: 80px;
+  min-height: 100px;
+  max-height: 150px;
   padding: ${({ theme }) => theme.spacing.sm};
-  background: ${({ theme }) => theme.colors.background.secondary};
-  color: ${({ theme }) => theme.colors.text.primary};
   border: 2px solid ${({ theme }) => theme.colors.border.primary};
   border-radius: ${({ theme }) => theme.borderRadius.sm};
-  font-family: ${({ theme }) => theme.fonts.primary};
-  font-size: ${({ theme }) => theme.fonts.sizes.sm};
+  background: ${({ theme }) => theme.colors.background.primary};
+  color: ${({ theme }) => theme.colors.text.primary};
+  font-family: inherit;
+  font-size: 0.9rem;
   resize: vertical;
-  
+
   &:focus {
     outline: none;
     border-color: ${({ theme }) => theme.colors.primary};
-    box-shadow: 0 0 0 1px ${({ theme }) => theme.colors.primary};
   }
-  
+
   &::placeholder {
     color: ${({ theme }) => theme.colors.text.muted};
   }
 `;
 
-const ButtonGroup = styled.div`
-  display: flex;
-  gap: ${({ theme }) => theme.spacing.sm};
-  margin-top: ${({ theme }) => theme.spacing.md};
+const SubmitButton = styled(Button)`
+  width: 100%;
 `;
 
 const EmptyState = styled.div`
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   padding: ${({ theme }) => theme.spacing.xl};
   color: ${({ theme }) => theme.colors.text.muted};
 `;
 
 const ActionPanel: React.FC = () => {
-  const { submitAction, isProcessing, currentGame, availableActions } = useGameStore();
-  const [, addNotification] = useAtom(addNotificationAtom);
+  const { submitAction, isProcessing, currentGame, availableActions, addNotification } = useGameStore();
 
   const [selectedAction, setSelectedAction] = useState<GameAction | null>(null);
   const [reasoning, setReasoning] = useState('');
 
-  // 调试信息
   console.log('ActionPanel状态:', {
     isProcessing,
     currentGameStatus: currentGame?.status,
@@ -196,36 +174,26 @@ const ActionPanel: React.FC = () => {
     }
   };
 
-  // 计算是否可以提交行动
-  const canSubmitAction = !isProcessing &&
-                         availableActions.length > 0 &&
-                         currentGame?.status === 'active' &&
-                         selectedAction !== null &&
-                         reasoning.trim().length > 0;
-
   const getActionTypeText = (type: string): string => {
-    const types = {
+    const typeMap = {
       business: '商业',
       social: '社交',
-      personal: '个人',
-      investment: '投资'
+      political: '政治',
+      personal: '个人'
     };
-    return types[type as keyof typeof types] || type;
+    return typeMap[type as keyof typeof typeMap] || type;
   };
 
-  if (isProcessing) {
+  if (!currentGame || currentGame.status !== 'active') {
     return (
       <ActionContainer>
         <Card.Header>
-          <Card.Title>行动选择</Card.Title>
+          <Card.Title>行动面板</Card.Title>
         </Card.Header>
         <Card.Content>
           <EmptyState>
-            <div style={{ marginBottom: '1rem' }}>🤖</div>
-            <div>AI正在处理回合...</div>
-            <div style={{ fontSize: '0.8rem', marginTop: '0.5rem', color: '#666' }}>
-              请稍候，其他角色正在做出决策
-            </div>
+            <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>⏳</div>
+            <div>等待游戏开始...</div>
           </EmptyState>
         </Card.Content>
       </ActionContainer>
@@ -236,15 +204,13 @@ const ActionPanel: React.FC = () => {
     return (
       <ActionContainer>
         <Card.Header>
-          <Card.Title>行动选择</Card.Title>
+          <Card.Title>行动面板</Card.Title>
+          <Card.Subtitle>选择您的下一步行动</Card.Subtitle>
         </Card.Header>
         <Card.Content>
           <EmptyState>
-            <div style={{ marginBottom: '1rem' }}>⏳</div>
-            <div>暂无可用行动</div>
-            <div style={{ fontSize: '0.8rem', marginTop: '0.5rem', color: '#666' }}>
-              等待游戏状态更新...
-            </div>
+            <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>🔄</div>
+            <div>正在加载可用行动...</div>
           </EmptyState>
         </Card.Content>
       </ActionContainer>
@@ -254,11 +220,17 @@ const ActionPanel: React.FC = () => {
   return (
     <ActionContainer>
       <Card.Header>
-        <Card.Title>行动选择</Card.Title>
-        <Card.Subtitle>选择您这回合的行动</Card.Subtitle>
+        <Card.Title>行动面板</Card.Title>
+        <Card.Subtitle>选择您的下一步行动</Card.Subtitle>
       </Card.Header>
       
-      <Card.Content>
+      <Card.Content style={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: 0,
+        overflow: 'hidden'
+      }}>
         <ActionList>
           {availableActions.map((action) => (
             <ActionItem
@@ -280,7 +252,7 @@ const ActionPanel: React.FC = () => {
             <div style={{ marginBottom: '1rem' }}>
               <strong>已选择：{selectedAction.actionName}</strong>
             </div>
-            
+
             <div style={{ marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: 'bold' }}>
               决策理由：
             </div>
@@ -290,39 +262,27 @@ const ActionPanel: React.FC = () => {
               placeholder="请说明您选择这个行动的理由和策略考虑..."
               maxLength={500}
             />
-            
-            <div style={{ 
-              fontSize: '0.8rem', 
-              color: '#666', 
+
+            <div style={{
+              fontSize: '0.8rem',
+              color: '#666',
               marginTop: '0.5rem',
-              textAlign: 'right' 
+              textAlign: 'right'
             }}>
               {reasoning.length}/500
             </div>
-
-            <ButtonGroup>
-              <Button
-                variant="secondary"
-                size="small"
-                onClick={() => {
-                  setSelectedAction(null);
-                  setReasoning('');
-                }}
-              >
-                取消
-              </Button>
-              <Button
-                variant="primary"
-                size="small"
-                onClick={handleSubmitAction}
-                disabled={!canSubmitAction || !reasoning.trim()}
-                fullWidth
-              >
-                提交行动
-              </Button>
-            </ButtonGroup>
           </ActionDetails>
         )}
+
+        <SubmitButton
+          variant="primary"
+          size="large"
+          onClick={handleSubmitAction}
+          disabled={!selectedAction || !reasoning.trim() || isProcessing}
+          style={{ marginTop: 'auto' }}
+        >
+          {isProcessing ? '处理中...' : '提交行动'}
+        </SubmitButton>
       </Card.Content>
     </ActionContainer>
   );

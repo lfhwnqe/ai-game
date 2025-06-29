@@ -1,12 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
-import { useAtom } from 'jotai';
-import { 
-  gameStateAtom, 
-  marketConditionAtom, 
-  recentEventsAtom,
-  lastRoundResultAtom 
-} from '../../atoms/gameAtoms';
+import { useGameStore } from '../../stores/gameStore';
 import { Card } from '../UI/Card';
 
 const GameBoardContainer = styled(Card)`
@@ -14,6 +8,7 @@ const GameBoardContainer = styled(Card)`
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  min-height: 0; /* 确保容器可以收缩 */
 `;
 
 const BoardGrid = styled.div`
@@ -155,10 +150,7 @@ const EmptyState = styled.div`
 `;
 
 const GameBoard: React.FC = () => {
-  const [gameState] = useAtom(gameStateAtom);
-  const [marketCondition] = useAtom(marketConditionAtom);
-  const [recentEvents] = useAtom(recentEventsAtom);
-  const [lastRoundResult] = useAtom(lastRoundResultAtom);
+  const { gameState, lastRoundResult } = useGameStore();
 
   const getMarketInfo = (condition: string) => {
     switch (condition) {
@@ -182,6 +174,10 @@ const GameBoard: React.FC = () => {
         };
     }
   };
+
+  // 从游戏状态中获取市场条件和事件
+  const marketCondition = gameState?.marketState?.condition || 'stable';
+  const recentEvents = gameState?.recentNews || [];
 
   if (!gameState) {
     return (
@@ -252,25 +248,29 @@ const GameBoard: React.FC = () => {
           <RoundResultPanel style={{ marginTop: '1rem' }}>
             <Card.Header>
               <Card.Title>上回合结果</Card.Title>
-              <Card.Subtitle>第 {lastRoundResult.roundNumber} 回合</Card.Subtitle>
+              <Card.Subtitle>第 {lastRoundResult.roundNumber || '未知'} 回合</Card.Subtitle>
             </Card.Header>
             <Card.Content>
               <ResultGrid>
                 <ResultItem>
                   <ResultLabel>玩家行动</ResultLabel>
-                  <ResultValue>{lastRoundResult.playerAction.actionName}</ResultValue>
+                  <ResultValue>
+                    {lastRoundResult.playerAction?.actionName ||
+                     lastRoundResult.actionName ||
+                     '处理中...'}
+                  </ResultValue>
                 </ResultItem>
                 <ResultItem>
                   <ResultLabel>AI行动数</ResultLabel>
-                  <ResultValue>{lastRoundResult.aiActions.length}</ResultValue>
+                  <ResultValue>{lastRoundResult.aiActions?.length || 0}</ResultValue>
                 </ResultItem>
                 <ResultItem>
                   <ResultLabel>触发事件</ResultLabel>
-                  <ResultValue>{lastRoundResult.events.length}</ResultValue>
+                  <ResultValue>{lastRoundResult.events?.length || 0}</ResultValue>
                 </ResultItem>
                 <ResultItem>
                   <ResultLabel>关系变化</ResultLabel>
-                  <ResultValue>{lastRoundResult.relationshipChanges.length}</ResultValue>
+                  <ResultValue>{lastRoundResult.relationshipChanges?.length || 0}</ResultValue>
                 </ResultItem>
               </ResultGrid>
             </Card.Content>

@@ -5,7 +5,9 @@ import { playerStatsAtom, gameTimeAtom } from '../../atoms/gameAtoms';
 import { Card } from '../UI/Card';
 
 const StatsContainer = styled(Card)`
-  padding: ${({ theme }) => theme.spacing.md};
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* 确保容器可以收缩 */
 `;
 
 const StatsGrid = styled.div`
