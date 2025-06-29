@@ -1,0 +1,23 @@
+{
+  "name": "ai-game",
+  "version": "1.0.0",
+  "description": "AI-driven web game with graph databases",
+  "private": true,
+  "scripts": {
+    "db:init": "node scripts/init-database.js",
+    "start:db": "./start-database.sh",
+    "start:app": "./start-app.sh",
+    "start": "./start.sh",
+    "stop": "./stop.sh"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "dotenv": "^16.3.1",
+    "mongodb": "^6.3.0",
+    "neo4j-driver": "^5.15.0"
+  },
+  "devDependencies": {},
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

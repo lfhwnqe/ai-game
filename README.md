@@ -31,7 +31,17 @@
 
 ## 🚀 快速启动
 
-### 一键启动（推荐）
+### 分步启动（推荐）
+
+```bash
+# 1. 启动数据库
+./start-database.sh
+
+# 2. 启动应用（新终端窗口）
+./start-app.sh
+```
+
+### 一键启动
 
 ```bash
 # macOS/Linux
@@ -42,8 +52,9 @@ chmod +x start.sh
 start.bat
 ```
 
-### 详细启动指南
-查看 [STARTUP_GUIDE.md](./STARTUP_GUIDE.md) 获取完整的启动说明和故障排除。
+### 启动指南
+- 📋 **快速启动**: [QUICK_START.md](./QUICK_START.md) - 最简启动步骤
+- 📖 **详细指南**: [STARTUP_GUIDE.md](./STARTUP_GUIDE.md) - 完整启动说明和故障排除
 
 ### 访问地址
 - 🎮 **游戏前端**: http://localhost:3000

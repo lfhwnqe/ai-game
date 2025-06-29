@@ -59,7 +59,13 @@ const ContentWrapper = styled.div`
 
 const Layout: React.FC = () => {
   // 初始化WebSocket连接
-  useSocket();
+  console.log('Layout组件渲染');
+
+  try {
+    useSocket();
+  } catch (error) {
+    console.error('WebSocket初始化失败:', error);
+  }
 
   return (
     <LayoutContainer>

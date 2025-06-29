@@ -166,8 +166,8 @@ const LoginPage: React.FC = () => {
 
     if (!formData.password) {
       errors.password = '请输入密码';
-    } else if (formData.password.length < 6) {
-      errors.password = '密码至少6个字符';
+    } else if (formData.password.length < 8) {
+      errors.password = '密码至少8个字符';
     }
 
     setValidationErrors(errors);
@@ -183,7 +183,13 @@ const LoginPage: React.FC = () => {
 
     try {
       await login(formData);
-      navigate('/game');
+      console.log('登录成功，准备跳转...');
+
+      // 添加短暂延迟确保状态更新完成
+      setTimeout(() => {
+        console.log('执行跳转到游戏页面');
+        navigate('/game');
+      }, 100);
     } catch (error) {
       // 错误已经在store中处理
       console.error('登录失败:', error);

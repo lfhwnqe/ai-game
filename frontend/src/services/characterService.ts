@@ -7,8 +7,8 @@ export const characterService = {
   getAllCharacters: async (type?: string): Promise<Character[]> => {
     try {
       const params = type ? { type } : {};
-      const response = await api.get<{ characters: Character[] }>('/characters', { params });
-      return response.characters;
+      const response = await api.get<Character[]>('/characters', { params });
+      return response;
     } catch (error) {
       console.error('获取角色列表失败:', error);
       throw error;
@@ -18,8 +18,8 @@ export const characterService = {
   // 获取单个角色详情
   getCharacter: async (characterId: string): Promise<Character> => {
     try {
-      const response = await api.get<{ character: Character }>(`/characters/${characterId}`);
-      return response.character;
+      const response = await api.get<Character>(`/characters/${characterId}`);
+      return response;
     } catch (error) {
       console.error('获取角色详情失败:', error);
       throw error;
@@ -29,8 +29,8 @@ export const characterService = {
   // 获取角色关系
   getCharacterRelationships: async (characterId: string): Promise<Relationship[]> => {
     try {
-      const response = await api.get<{ relationships: Relationship[] }>(`/characters/${characterId}/relationships`);
-      return response.relationships;
+      const response = await api.get<Relationship[]>(`/characters/${characterId}/relationships`);
+      return response;
     } catch (error) {
       console.error('获取角色关系失败:', error);
       throw error;
@@ -111,8 +111,8 @@ export const characterService = {
         q: query,
         ...filters
       };
-      const response = await api.get<{ characters: Character[] }>('/characters/search', { params });
-      return response.characters;
+      const response = await api.get<Character[]>('/characters/search', { params });
+      return response;
     } catch (error) {
       console.error('搜索角色失败:', error);
       throw error;

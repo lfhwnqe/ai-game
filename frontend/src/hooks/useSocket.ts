@@ -24,7 +24,7 @@ export const useSocketConnection = () => {
     try {
       await socketService.connect();
       connectionRef.current = true;
-      
+
       addNotification({
         type: 'success',
         title: '连接成功',
@@ -32,7 +32,11 @@ export const useSocketConnection = () => {
       });
     } catch (error: any) {
       console.error('WebSocket连接失败:', error);
-      setError(error.message || 'WebSocket连接失败');
+      // 不要因为WebSocket连接失败就阻止页面渲染
+      // setError(error.message || 'WebSocket连接失败');
+
+      // 只在控制台记录错误，不影响用户体验
+      console.warn('WebSocket连接失败，游戏将在离线模式下运行');
     }
   }, [isAuthenticated, addNotification, setError]);
 

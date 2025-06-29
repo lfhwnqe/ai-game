@@ -9,9 +9,9 @@ export const gameService = {
     winCondition: 'wealth' | 'reputation' | 'influence';
   }): Promise<Game> => {
     try {
-      const response = await api.post<{ game: Game }>('/games', gameConfig);
-      console.log('游戏创建成功:', response.game);
-      return response.game;
+      const response = await api.post<Game>('/games', gameConfig);
+      console.log('游戏创建成功:', response);
+      return response;
     } catch (error) {
       console.error('创建游戏失败:', error);
       throw error;
@@ -21,8 +21,8 @@ export const gameService = {
   // 获取游戏信息
   getGame: async (gameId: string): Promise<Game> => {
     try {
-      const response = await api.get<{ game: Game }>(`/games/${gameId}`);
-      return response.game;
+      const response = await api.get<Game>(`/games/${gameId}`);
+      return response;
     } catch (error) {
       console.error('获取游戏信息失败:', error);
       throw error;
@@ -42,9 +42,9 @@ export const gameService = {
   },
 
   // 开始游戏
-  startGame: async (gameId: string): Promise<GameState> => {
+  startGame: async (gameId: string): Promise<Game> => {
     try {
-      const response = await api.post<GameState>(`/games/${gameId}/start`);
+      const response = await api.post<Game>(`/games/${gameId}/start`);
       console.log('游戏已开始:', response);
       return response;
     } catch (error) {
@@ -68,8 +68,8 @@ export const gameService = {
   // 获取可用行动列表
   getAvailableActions: async (gameId: string): Promise<GameAction[]> => {
     try {
-      const response = await api.get<{ actions: GameAction[] }>(`/games/${gameId}/actions/available`);
-      return response.actions;
+      const response = await api.get<GameAction[]>(`/games/${gameId}/actions/available`);
+      return response;
     } catch (error) {
       console.error('获取可用行动失败:', error);
       throw error;

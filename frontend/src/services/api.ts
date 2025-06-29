@@ -97,7 +97,16 @@ apiClient.interceptors.response.use(
       }
       
       // 返回格式化的错误信息
-      const apiError = new Error(data?.message || `HTTP ${status} Error`);
+      let errorMessage = data?.message || `HTTP ${status} Error`;
+
+      // 处理验证错误 - 如果error.message是数组，则合并为字符串
+      if (data?.error?.message && Array.isArray(data.error.message)) {
+        errorMessage = data.error.message.join('; ');
+      } else if (data?.error?.message && typeof data.error.message === 'string') {
+        errorMessage = data.error.message;
+      }
+
+      const apiError = new Error(errorMessage);
       (apiError as any).status = status;
       (apiError as any).data = data;
       return Promise.reject(apiError);

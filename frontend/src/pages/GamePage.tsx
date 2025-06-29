@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import { useAtom } from 'jotai';
 import { useGameStore } from '../stores/gameStore';
 import { useGameSocket } from '../hooks/useSocket';
+import { useAuth } from '../stores/authStore';
 import { gameOverviewAtom, addNotificationAtom } from '../atoms/gameAtoms';
 import { Card } from '../components/UI/Card';
 import { Button } from '../components/UI/Button';
@@ -11,6 +12,7 @@ import GameBoard from '../components/Game/GameBoard';
 import PlayerStats from '../components/Game/PlayerStats';
 import ActionPanel from '../components/Game/ActionPanel';
 import GameHistory from '../components/Game/GameHistory';
+import { gameService } from '../services/gameService';
 
 const GamePageContainer = styled.div`
   display: flex;
@@ -128,6 +130,8 @@ const LoadingContainer = styled.div`
 `;
 
 const GamePage: React.FC = () => {
+  console.log('GamePage组件渲染');
+
   const {
     currentGame,
     gameState,
@@ -138,10 +142,19 @@ const GamePage: React.FC = () => {
     startGame,
     clearError,
   } = useGameStore();
-  
+
+  const { user } = useAuth();
   const [gameOverview] = useAtom(gameOverviewAtom);
   const [, addNotification] = useAtom(addNotificationAtom);
-  
+  const [hasCheckedExistingGame, setHasCheckedExistingGame] = useState(false);
+
+  console.log('GamePage状态:', {
+    currentGame: currentGame?.gameId,
+    isLoading,
+    hasCheckedExistingGame,
+    user: user?.username
+  });
+
   const [gameConfig, setGameConfig] = useState({
     difficulty: 'standard' as 'easy' | 'standard' | 'hard',
     winCondition: 'wealth' as 'wealth' | 'reputation' | 'influence',
@@ -149,6 +162,59 @@ const GamePage: React.FC = () => {
 
   // 初始化WebSocket连接
   useGameSocket(currentGame?.gameId);
+
+  // 检查用户是否有现有游戏
+  useEffect(() => {
+    const checkExistingGame = async () => {
+      const token = localStorage.getItem('auth_token');
+      console.log('useEffect 触发，检查条件:', {
+        userId: user?.userId,
+        hasCheckedExistingGame,
+        currentGame: !!currentGame,
+        hasToken: !!token,
+        user: user
+      });
+
+      if (!user?.userId || hasCheckedExistingGame || currentGame) {
+        console.log('跳过检查，条件不满足');
+        if (!hasCheckedExistingGame && !currentGame && user?.userId) {
+          setHasCheckedExistingGame(true);
+        }
+        return;
+      }
+
+      try {
+        console.log('开始检查用户现有游戏...');
+        const userGames = await gameService.getUserGames();
+        console.log('获取到用户游戏列表:', userGames);
+
+        // 查找进行中的游戏
+        const activeGame = userGames.find(game =>
+          game.status === 'active' || game.status === 'waiting'
+        );
+
+        if (activeGame) {
+          console.log('找到现有游戏:', activeGame);
+          await loadGame(activeGame.gameId);
+          addNotification({
+            type: 'info',
+            title: '游戏已恢复',
+            message: '已为您恢复之前的游戏进度',
+          });
+        } else {
+          console.log('未找到现有游戏，用户可以创建新游戏');
+        }
+      } catch (error) {
+        console.error('检查现有游戏失败:', error);
+        // 不显示错误通知，让用户正常创建新游戏
+      } finally {
+        console.log('检查完成，设置hasCheckedExistingGame为true');
+        setHasCheckedExistingGame(true);
+      }
+    };
+
+    checkExistingGame();
+  }, [user?.userId, hasCheckedExistingGame, currentGame]);
 
   useEffect(() => {
     // 清除错误
@@ -203,14 +269,14 @@ const GamePage: React.FC = () => {
     return names[condition as keyof typeof names] || condition;
   };
 
-  // 如果正在加载
-  if (isLoading) {
+  // 如果正在加载或还在检查现有游戏
+  if (isLoading || !hasCheckedExistingGame) {
     return (
       <GamePageContainer>
         <Card>
           <LoadingContainer>
             <LoadingSpinner size="large" variant="dots" />
-            <div>加载游戏中...</div>
+            <div>{!hasCheckedExistingGame ? '检查游戏状态中...' : '加载游戏中...'}</div>
           </LoadingContainer>
         </Card>
       </GamePageContainer>

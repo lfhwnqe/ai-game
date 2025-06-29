@@ -153,14 +153,15 @@ const RelationshipNetwork: React.FC<RelationshipNetworkProps> = ({
 
       // 创建PIXI应用
       if (canvasRef.current) {
-        const app = new PIXI.Application({
+        const app = new PIXI.Application();
+        await app.init({
           width,
           height,
           backgroundColor: 0x0a0a0a,
           antialias: true,
         });
 
-        canvasRef.current.appendChild(app.view as HTMLCanvasElement);
+        canvasRef.current.appendChild(app.canvas);
         appRef.current = app;
 
         // 构建网络节点和边

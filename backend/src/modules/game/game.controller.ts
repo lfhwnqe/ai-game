@@ -1,13 +1,14 @@
-import { 
-  Controller, 
-  Get, 
-  Post, 
-  Body, 
-  Param, 
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
   UseGuards,
   Request,
   HttpStatus,
   HttpCode,
+  Query,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { GameService } from './game.service';
@@ -20,6 +21,21 @@ export class GameController {
   constructor(private readonly gameService: GameService) {}
 
   /**
+   * 获取用户的游戏列表
+   */
+  @Get()
+  async getUserGames(@Request() req, @Query('status') status?: string) {
+    const playerId = req.user.userId;
+    const games = await this.gameService.getUserGames(playerId, status);
+
+    return {
+      success: true,
+      data: { games },
+      message: 'User games retrieved successfully',
+    };
+  }
+
+  /**
    * 创建新游戏
    */
   @Post()
@@ -27,10 +43,11 @@ export class GameController {
   async createGame(@Request() req, @Body() createGameDto: CreateGameDto) {
     const playerId = req.user.userId;
     const game = await this.gameService.createGame(
-      playerId, 
-      createGameDto.difficulty
+      playerId,
+      createGameDto.difficulty,
+      createGameDto.winCondition
     );
-    
+
     return {
       success: true,
       data: game,
@@ -100,6 +117,20 @@ export class GameController {
       success: true,
       data: playerAction,
       message: 'Action submitted successfully',
+    };
+  }
+
+  /**
+   * 获取可用行动列表
+   */
+  @Get(':gameId/actions/available')
+  async getAvailableActions(@Param('gameId') gameId: string) {
+    const actions = await this.gameService.getAvailableActions(gameId);
+
+    return {
+      success: true,
+      data: actions,
+      message: 'Available actions retrieved successfully',
     };
   }
 

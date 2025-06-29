@@ -2,7 +2,19 @@
 
 ## 🚀 一键启动
 
-### 方法1：使用一键启动脚本（推荐）
+### 方法1：分步启动（推荐）
+
+```bash
+# 1. 启动数据库服务
+chmod +x start-database.sh
+./start-database.sh
+
+# 2. 启动前后端应用（新终端窗口）
+chmod +x start-app.sh
+./start-app.sh
+```
+
+### 方法2：完整一键启动
 
 ```bash
 # 给脚本执行权限
@@ -12,7 +24,7 @@ chmod +x start.sh
 ./start.sh
 ```
 
-### 方法2：使用详细启动脚本
+### 方法3：使用详细启动脚本
 
 ```bash
 # 给脚本执行权限
@@ -48,9 +60,15 @@ npm --version
 - **Neo4j** - 图数据库，存储角色关系 (端口: 7474, 7687)
 - **Redis** - 缓存和会话存储 (端口: 6379)
 
+### 一键启动数据库
+```bash
+# 启动数据库服务
+./start-database.sh
+```
+
 ### 数据库管理命令
 ```bash
-# 启动数据库
+# 手动启动数据库
 docker-compose up -d mongodb neo4j redis
 
 # 停止数据库
@@ -60,7 +78,25 @@ docker-compose down
 docker-compose logs -f mongodb
 docker-compose logs -f neo4j
 docker-compose logs -f redis
+
+# 重启特定数据库
+docker-compose restart mongodb
+docker-compose restart neo4j
+docker-compose restart redis
 ```
+
+## 🚀 前后端应用
+
+### 一键启动应用
+```bash
+# 启动前后端应用（需要先启动数据库）
+./start-app.sh
+```
+
+应用启动脚本支持三种模式：
+1. **本地模式**（推荐）- 使用本地Node.js环境，开发体验更好
+2. **Docker模式** - 完全容器化运行
+3. **混合模式** - 后端本地运行，前端Docker运行
 
 ## 🔧 手动启动（备用方案）
 
@@ -68,12 +104,21 @@ docker-compose logs -f redis
 
 ### 1. 启动数据库
 ```bash
+# 使用一键脚本
+./start-database.sh
+
+# 或手动启动
 docker-compose up -d mongodb neo4j redis
 ```
 
 ### 2. 启动后端
 ```bash
 cd backend
+# 使用yarn（推荐）
+yarn install
+yarn start:dev
+
+# 或使用npm
 npm install
 npm run start:dev
 ```
@@ -81,6 +126,11 @@ npm run start:dev
 ### 3. 启动前端（新终端窗口）
 ```bash
 cd frontend
+# 使用yarn（推荐）
+yarn install
+yarn dev
+
+# 或使用npm
 npm install
 npm run dev
 ```

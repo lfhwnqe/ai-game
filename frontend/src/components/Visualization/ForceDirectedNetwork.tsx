@@ -192,11 +192,12 @@ const ForceDirectedNetwork: React.FC<ForceDirectedNetworkProps> = ({
     };
   }, [charactersData, relationships]);
 
-  const initializeVisualization = () => {
+  const initializeVisualization = async () => {
     if (!canvasRef.current) return;
 
     // 创建PIXI应用
-    const app = new PIXI.Application({
+    const app = new PIXI.Application();
+    await app.init({
       width,
       height,
       backgroundColor: 0x0a0a0a,
@@ -204,7 +205,7 @@ const ForceDirectedNetwork: React.FC<ForceDirectedNetworkProps> = ({
     });
 
     canvasRef.current.innerHTML = '';
-    canvasRef.current.appendChild(app.view as HTMLCanvasElement);
+    canvasRef.current.appendChild(app.canvas);
     appRef.current = app;
 
     // 创建网络节点

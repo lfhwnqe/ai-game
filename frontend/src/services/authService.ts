@@ -11,15 +11,15 @@ export const authService = {
     confirmPassword: string;
   }): Promise<AuthResponse> => {
     try {
-      const response = await api.post<AuthResponse>('/auth/register', userData);
-      
+      const response = await api.post<{user: User, token: string}>('/auth/register', userData);
+
       // 注册成功后自动保存token
-      if (response.data.token) {
-        localStorage.setItem('auth_token', response.data.token);
-        localStorage.setItem('user_info', JSON.stringify(response.data.user));
+      if (response.token) {
+        localStorage.setItem('auth_token', response.token);
+        localStorage.setItem('user_info', JSON.stringify(response.user));
       }
-      
-      return response;
+
+      return { success: true, data: response, message: 'Registration successful' };
     } catch (error) {
       console.error('注册失败:', error);
       throw error;
@@ -32,15 +32,15 @@ export const authService = {
     password: string;
   }): Promise<AuthResponse> => {
     try {
-      const response = await api.post<AuthResponse>('/auth/login', credentials);
-      
+      const response = await api.post<{user: User, token: string}>('/auth/login', credentials);
+
       // 登录成功后保存token和用户信息
-      if (response.data.token) {
-        localStorage.setItem('auth_token', response.data.token);
-        localStorage.setItem('user_info', JSON.stringify(response.data.user));
+      if (response.token) {
+        localStorage.setItem('auth_token', response.token);
+        localStorage.setItem('user_info', JSON.stringify(response.user));
       }
-      
-      return response;
+
+      return { success: true, data: response, message: 'Login successful' };
     } catch (error) {
       console.error('登录失败:', error);
       throw error;
@@ -70,10 +70,10 @@ export const authService = {
   getCurrentUser: async (): Promise<User> => {
     try {
       const response = await api.get<{ user: User }>('/auth/profile');
-      
+
       // 更新本地存储的用户信息
       localStorage.setItem('user_info', JSON.stringify(response.user));
-      
+
       return response.user;
     } catch (error) {
       console.error('获取用户信息失败:', error);
@@ -85,10 +85,10 @@ export const authService = {
   updateProfile: async (userData: Partial<User>): Promise<User> => {
     try {
       const response = await api.put<{ user: User }>('/auth/profile', userData);
-      
+
       // 更新本地存储的用户信息
       localStorage.setItem('user_info', JSON.stringify(response.user));
-      
+
       return response.user;
     } catch (error) {
       console.error('更新用户资料失败:', error);
@@ -132,11 +132,11 @@ export const authService = {
   refreshToken: async (): Promise<string> => {
     try {
       const response = await api.post<{ token: string }>('/auth/refresh');
-      
+
       if (response.token) {
         localStorage.setItem('auth_token', response.token);
       }
-      
+
       return response.token;
     } catch (error) {
       console.error('刷新token失败:', error);

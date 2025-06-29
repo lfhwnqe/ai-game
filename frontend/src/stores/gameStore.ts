@@ -138,36 +138,27 @@ export const useGameStore = create<GameStoreState>()(
         // 开始游戏
         startGame: async (gameId) => {
           set({ isLoading: true, error: null });
-          
+
           try {
-            const gameState = await gameService.startGame(gameId);
+            const updatedGame = await gameService.startGame(gameId);
+            const gameState = await gameService.getGameState(gameId);
             const availableActions = await gameService.getAvailableActions(gameId);
-            
+
             set({
+              currentGame: updatedGame,
               gameState,
               availableActions,
               isLoading: false,
               error: null,
             });
-            
-            // 更新当前游戏状态
-            const currentGame = get().currentGame;
-            if (currentGame) {
-              set({
-                currentGame: {
-                  ...currentGame,
-                  status: 'active',
-                },
-              });
-            }
-            
-            console.log('游戏开始成功:', gameState);
+
+            console.log('游戏开始成功:', { game: updatedGame, gameState });
           } catch (error: any) {
             set({
               isLoading: false,
               error: error.message || '开始游戏失败',
             });
-            
+
             console.error('开始游戏失败:', error);
             throw error;
           }

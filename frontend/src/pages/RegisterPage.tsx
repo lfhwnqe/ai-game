@@ -123,6 +123,33 @@ const PasswordHint = styled.div`
   margin-top: ${({ theme }) => theme.spacing.xs};
 `;
 
+const PasswordRequirements = styled.div`
+  margin-top: ${({ theme }) => theme.spacing.sm};
+  padding: ${({ theme }) => theme.spacing.sm};
+  background: rgba(0, 123, 255, 0.1);
+  border: 1px solid ${({ theme }) => theme.colors.primary};
+  border-radius: ${({ theme }) => theme.borderRadius.sm};
+  font-size: ${({ theme }) => theme.fonts.sizes.xs};
+  color: ${({ theme }) => theme.colors.text.secondary};
+`;
+
+const RequirementItem = styled.div<{ met: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.xs};
+  margin-bottom: ${({ theme }) => theme.spacing.xs};
+  color: ${({ met, theme }) => met ? theme.colors.status.success : theme.colors.text.secondary};
+
+  &:before {
+    content: '${({ met }) => met ? '✓' : '○'}';
+    font-weight: bold;
+  }
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+`;
+
 const ButtonGroup = styled.div`
   display: flex;
   flex-direction: column;
@@ -228,8 +255,10 @@ const RegisterPage: React.FC = () => {
     // 密码验证
     if (!formData.password) {
       errors.password = '请输入密码';
-    } else if (formData.password.length < 6) {
-      errors.password = '密码至少6个字符';
+    } else if (formData.password.length < 8) {
+      errors.password = '密码至少8个字符';
+    } else if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
+      errors.password = '密码必须包含至少一个小写字母、一个大写字母和一个数字';
     }
 
     // 确认密码验证
@@ -342,6 +371,20 @@ const RegisterPage: React.FC = () => {
                 </PasswordHint>
               </>
             )}
+            <PasswordRequirements>
+              <RequirementItem met={formData.password.length >= 8}>
+                至少8个字符
+              </RequirementItem>
+              <RequirementItem met={/[a-z]/.test(formData.password)}>
+                包含小写字母
+              </RequirementItem>
+              <RequirementItem met={/[A-Z]/.test(formData.password)}>
+                包含大写字母
+              </RequirementItem>
+              <RequirementItem met={/\d/.test(formData.password)}>
+                包含数字
+              </RequirementItem>
+            </PasswordRequirements>
             {validationErrors.password && (
               <ErrorMessage>{validationErrors.password}</ErrorMessage>
             )}

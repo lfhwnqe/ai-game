@@ -25,9 +25,13 @@ export class GameService {
   /**
    * 创建新游戏
    */
-  async createGame(playerId: string, difficulty: string = 'standard'): Promise<Game> {
+  async createGame(
+    playerId: string,
+    difficulty: string = 'standard',
+    winCondition: string = 'wealth'
+  ): Promise<Game> {
     const gameId = this.generateGameId();
-    
+
     const initialPlayerStats = {
       money: this.configService.get<number>('game.balance.initialMoney'),
       reputation: this.configService.get<number>('game.balance.initialReputation'),
@@ -42,6 +46,7 @@ export class GameService {
       status: 'waiting',
       currentRound: 1,
       difficulty,
+      winCondition,
       playerStats: initialPlayerStats,
       gameStartTime: new Date(),
     });
@@ -66,6 +71,24 @@ export class GameService {
   }
 
   /**
+   * 获取用户的游戏列表
+   */
+  async getUserGames(playerId: string, status?: string): Promise<Game[]> {
+    const query: any = { playerId };
+
+    if (status) {
+      query.status = status;
+    }
+
+    const games = await this.gameModel
+      .find(query)
+      .sort({ gameStartTime: -1 })
+      .exec();
+
+    return games;
+  }
+
+  /**
    * 获取当前游戏状态
    */
   async getCurrentGameState(gameId: string): Promise<GameState> {
@@ -73,12 +96,26 @@ export class GameService {
     const gameState = await this.gameStateModel
       .findOne({ gameId, round: game.currentRound })
       .exec();
-    
+
     if (!gameState) {
       throw new NotFoundException(`Game state for round ${game.currentRound} not found`);
     }
-    
+
     return gameState;
+  }
+
+  /**
+   * 获取可用行动列表
+   */
+  async getAvailableActions(gameId: string): Promise<any[]> {
+    try {
+      const gameState = await this.getCurrentGameState(gameId);
+      return gameState.availableActions || [];
+    } catch (error) {
+      // 如果游戏状态不存在，返回默认行动
+      const game = await this.getGame(gameId);
+      return await this.generateAvailableActions(gameId, game.currentRound);
+    }
   }
 
   /**
@@ -86,20 +123,21 @@ export class GameService {
    */
   async startGame(gameId: string): Promise<Game> {
     const game = await this.getGame(gameId);
-    
+
     if (game.status !== 'waiting') {
       throw new BadRequestException('Game is not in waiting status');
     }
 
-    await this.gameModel.findOneAndUpdate(
+    const updatedGame = await this.gameModel.findOneAndUpdate(
       { gameId },
       {
         status: 'active',
         gameStartTime: new Date()
-      }
+      },
+      { new: true }
     ).exec();
 
-    return game;
+    return updatedGame;
   }
 
   /**
