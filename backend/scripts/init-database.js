@@ -89,8 +89,17 @@ async function initMongoDB() {
     // 创建关系数据
     console.log('🔄 创建关系数据...');
     const Relationship = mongoose.model('Relationship', new mongoose.Schema({}, { strict: false }));
-    await Relationship.insertMany(relationshipsData);
-    console.log(`✅ 创建了 ${relationshipsData.length} 个关系`);
+
+    // 为关系数据添加isActive字段
+    const relationshipsWithActive = relationshipsData.map(rel => ({
+      ...rel,
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }));
+
+    await Relationship.insertMany(relationshipsWithActive);
+    console.log(`✅ 创建了 ${relationshipsWithActive.length} 个关系`);
 
   } catch (error) {
     console.error('❌ MongoDB初始化失败:', error);

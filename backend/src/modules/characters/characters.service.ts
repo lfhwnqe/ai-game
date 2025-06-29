@@ -171,6 +171,49 @@ export class CharactersService {
   }
 
   /**
+   * 获取角色统计信息
+   */
+  async getCharacterStats(): Promise<any> {
+    const totalCharacters = await this.characterModel.countDocuments({ isActive: true });
+    const totalRelationships = await this.relationshipModel.countDocuments({ isActive: true });
+
+    // 按类型统计角色数量
+    const charactersByType = await this.characterModel.aggregate([
+      { $match: { isActive: true } },
+      { $group: { _id: '$type', count: { $sum: 1 } } },
+      { $sort: { count: -1 } }
+    ]);
+
+    // 按关系类型统计关系数量
+    const relationshipsByType = await this.relationshipModel.aggregate([
+      { $match: { isActive: true } },
+      { $group: { _id: '$relationshipType', count: { $sum: 1 } } },
+      { $sort: { count: -1 } }
+    ]);
+
+    // 获取平均关系强度
+    const avgStrengthResult = await this.relationshipModel.aggregate([
+      { $match: { isActive: true } },
+      { $group: { _id: null, avgStrength: { $avg: '$strength' } } }
+    ]);
+    const avgStrength = avgStrengthResult[0]?.avgStrength || 0;
+
+    return {
+      totalCharacters,
+      totalRelationships,
+      charactersByType: charactersByType.map(item => ({
+        type: item._id,
+        count: item.count
+      })),
+      relationshipsByType: relationshipsByType.map(item => ({
+        type: item._id,
+        count: item.count
+      })),
+      averageRelationshipStrength: Math.round(avgStrength * 100) / 100
+    };
+  }
+
+  /**
    * 获取最有影响力的角色
    */
   async getMostInfluentialCharacters(limit: number = 10): Promise<any[]> {

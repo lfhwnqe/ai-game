@@ -21,10 +21,37 @@ export class CharactersController {
    */
   @Get()
   async getAllCharacters(@Query('type') type?: string) {
-    const characters = type 
+    const characters = type
       ? await this.charactersService.getCharactersByType(type)
       : await this.charactersService.getAllCharacters();
-    
+
+    return {
+      success: true,
+      data: characters,
+    };
+  }
+
+  /**
+   * 获取角色统计信息
+   */
+  @Get('stats')
+  async getCharacterStats() {
+    const stats = await this.charactersService.getCharacterStats();
+
+    return {
+      success: true,
+      data: stats,
+    };
+  }
+
+  /**
+   * 获取最有影响力的角色
+   */
+  @Get('stats/influential')
+  async getMostInfluentialCharacters(@Query('limit') limit?: string) {
+    const limitNum = limit ? parseInt(limit) : 10;
+    const characters = await this.charactersService.getMostInfluentialCharacters(limitNum);
+
     return {
       success: true,
       data: characters,
@@ -37,7 +64,7 @@ export class CharactersController {
   @Get(':characterId')
   async getCharacter(@Param('characterId') characterId: string) {
     const character = await this.charactersService.getCharacterById(characterId);
-    
+
     return {
       success: true,
       data: character,
@@ -50,7 +77,7 @@ export class CharactersController {
   @Get(':characterId/relationships')
   async getCharacterRelationships(@Param('characterId') characterId: string) {
     const relationships = await this.charactersService.getCharacterRelationships(characterId);
-    
+
     return {
       success: true,
       data: relationships,
@@ -67,7 +94,7 @@ export class CharactersController {
   ) {
     const networkDepth = depth ? parseInt(depth) : 2;
     const network = await this.charactersService.getCharacterNetwork(characterId, networkDepth);
-    
+
     return {
       success: true,
       data: network,
@@ -83,24 +110,10 @@ export class CharactersController {
     @Param('toId') toId: string,
   ) {
     const path = await this.charactersService.findConnectionPath(fromId, toId);
-    
+
     return {
       success: true,
       data: path,
-    };
-  }
-
-  /**
-   * 获取最有影响力的角色
-   */
-  @Get('stats/influential')
-  async getMostInfluentialCharacters(@Query('limit') limit?: string) {
-    const limitNum = limit ? parseInt(limit) : 10;
-    const characters = await this.charactersService.getMostInfluentialCharacters(limitNum);
-    
-    return {
-      success: true,
-      data: characters,
     };
   }
 

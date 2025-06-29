@@ -214,37 +214,114 @@ export class Neo4jService implements OnModuleInit, OnModuleDestroy {
   async getCharacterNetwork(characterId: string, depth: number = 2): Promise<any> {
     const session = this.getSession();
     try {
-      const result = await session.run(
-        `
-        MATCH (center:Character {id: $characterId})
-        CALL apoc.path.subgraphNodes(center, {
-          relationshipFilter: "RELATIONSHIP",
-          minLevel: 0,
-          maxLevel: $depth
-        }) YIELD node
-        MATCH (node)-[r:RELATIONSHIP]-(connected)
-        WHERE connected IN apoc.path.subgraphNodes(center, {
-          relationshipFilter: "RELATIONSHIP",
-          minLevel: 0,
-          maxLevel: $depth
-        })
-        RETURN DISTINCT node.id as id, node.name as name, node.profession as profession,
-               collect(DISTINCT {
-                 target: connected.id,
-                 targetName: connected.name,
-                 type: r.type,
-                 strength: r.strength
-               }) as relationships
-        `,
-        { characterId, depth }
-      );
+      // 根据深度构建不同的查询
+      let query = '';
+      if (depth === 1) {
+        query = `
+          MATCH (center:Character {id: $characterId})
+          OPTIONAL MATCH (center)-[r1:RELATIONSHIP]-(level1:Character)
+          WITH center, collect(DISTINCT level1) as level1Nodes
+          WITH center, level1Nodes, [center] + level1Nodes as allNodes
+          UNWIND allNodes as node
+          OPTIONAL MATCH (node)-[r:RELATIONSHIP]-(other:Character)
+          WHERE other IN allNodes
+          RETURN DISTINCT
+            node.id as id,
+            node.name as name,
+            node.profession as profession,
+            node.type as type,
+            collect(DISTINCT {
+              target: other.id,
+              targetName: other.name,
+              type: r.type,
+              strength: r.strength,
+              trust: r.trust,
+              respect: r.respect
+            }) as relationships
+          ORDER BY
+            CASE WHEN node.id = $characterId THEN 0 ELSE 1 END,
+            node.name
+        `;
+      } else {
+        query = `
+          MATCH (center:Character {id: $characterId})
+          OPTIONAL MATCH (center)-[r1:RELATIONSHIP]-(level1:Character)
+          OPTIONAL MATCH (level1)-[r2:RELATIONSHIP]-(level2:Character)
+          WHERE level2.id <> center.id
+          WITH center, collect(DISTINCT level1) as level1Nodes, collect(DISTINCT level2) as level2Nodes
+          WITH center, level1Nodes, level2Nodes, [center] + level1Nodes + level2Nodes as allNodes
+          UNWIND allNodes as node
+          OPTIONAL MATCH (node)-[r:RELATIONSHIP]-(other:Character)
+          WHERE other IN allNodes
+          RETURN DISTINCT
+            node.id as id,
+            node.name as name,
+            node.profession as profession,
+            node.type as type,
+            collect(DISTINCT {
+              target: other.id,
+              targetName: other.name,
+              type: r.type,
+              strength: r.strength,
+              trust: r.trust,
+              respect: r.respect
+            }) as relationships
+          ORDER BY
+            CASE WHEN node.id = $characterId THEN 0 ELSE 1 END,
+            node.name
+        `;
+      }
 
-      return result.records.map(record => ({
+      const result = await session.run(query, { characterId });
+
+      const nodes = result.records.map(record => ({
         id: record.get('id'),
         name: record.get('name'),
         profession: record.get('profession'),
-        relationships: record.get('relationships'),
+        type: record.get('type'),
+        relationships: record.get('relationships').filter(rel => rel.target !== null),
       }));
+
+      // 构建网络数据结构
+      const edges = [];
+      const nodeMap = new Map();
+
+      nodes.forEach(node => {
+        nodeMap.set(node.id, node);
+      });
+
+      nodes.forEach(node => {
+        node.relationships.forEach(rel => {
+          if (rel.target && nodeMap.has(rel.target)) {
+            // 避免重复边
+            const edgeExists = edges.some(edge =>
+              (edge.from === node.id && edge.to === rel.target) ||
+              (edge.from === rel.target && edge.to === node.id)
+            );
+            if (!edgeExists) {
+              edges.push({
+                from: node.id,
+                to: rel.target,
+                type: rel.type,
+                strength: rel.strength,
+                trust: rel.trust,
+                respect: rel.respect
+              });
+            }
+          }
+        });
+      });
+
+      return {
+        nodes: nodes.map(node => ({
+          id: node.id,
+          name: node.name,
+          profession: node.profession,
+          type: node.type,
+          level: node.id === characterId ? 0 : 1 // 简化层级计算
+        })),
+        edges: edges
+      };
     } finally {
       await session.close();
     }
