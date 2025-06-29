@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { useAtom } from 'jotai';
 import { useGameStore } from '../stores/gameStore';
-import { useGameSocket } from '../hooks/useSocket';
 import { useAuth } from '../stores/authStore';
-import { gameOverviewAtom, addNotificationAtom } from '../atoms/gameAtoms';
+import { addNotificationAtom } from '../atoms/gameAtoms';
 import { Card } from '../components/UI/Card';
 import { Button } from '../components/UI/Button';
 import { LoadingSpinner } from '../components/UI/LoadingSpinner';
@@ -12,7 +12,6 @@ import GameBoard from '../components/Game/GameBoard';
 import PlayerStats from '../components/Game/PlayerStats';
 import ActionPanel from '../components/Game/ActionPanel';
 import GameHistory from '../components/Game/GameHistory';
-import { gameService } from '../services/gameService';
 
 const GamePageContainer = styled.div`
   display: flex;
@@ -130,91 +129,60 @@ const LoadingContainer = styled.div`
 `;
 
 const GamePage: React.FC = () => {
-  console.log('GamePage组件渲染');
+  const { gameId } = useParams<{ gameId: string }>();
+  const navigate = useNavigate();
 
   const {
     currentGame,
     gameState,
     isLoading,
     error,
-    createGame,
     loadGame,
     startGame,
     clearError,
   } = useGameStore();
 
   const { user } = useAuth();
-  const [gameOverview] = useAtom(gameOverviewAtom);
   const [, addNotification] = useAtom(addNotificationAtom);
-  const [hasCheckedExistingGame, setHasCheckedExistingGame] = useState(false);
 
   console.log('GamePage状态:', {
+    gameId,
     currentGame: currentGame?.gameId,
+    gameStatus: currentGame?.status,
+    gameState: gameState?.currentRound,
     isLoading,
-    hasCheckedExistingGame,
     user: user?.username
   });
 
-  const [gameConfig, setGameConfig] = useState({
-    difficulty: 'standard' as 'easy' | 'standard' | 'hard',
-    winCondition: 'wealth' as 'wealth' | 'reputation' | 'influence',
-  });
-
-  // 初始化WebSocket连接
-  useGameSocket(currentGame?.gameId);
-
-  // 检查用户是否有现有游戏
+  // 根据URL参数加载特定游戏
   useEffect(() => {
-    const checkExistingGame = async () => {
-      const token = localStorage.getItem('auth_token');
-      console.log('useEffect 触发，检查条件:', {
-        userId: user?.userId,
-        hasCheckedExistingGame,
-        currentGame: !!currentGame,
-        hasToken: !!token,
-        user: user
-      });
+    if (!gameId || !user?.userId) {
+      return;
+    }
 
-      if (!user?.userId || hasCheckedExistingGame || currentGame) {
-        console.log('跳过检查，条件不满足');
-        if (!hasCheckedExistingGame && !currentGame && user?.userId) {
-          setHasCheckedExistingGame(true);
-        }
-        return;
-      }
+    const loadSpecificGame = async () => {
+      console.log('加载游戏:', gameId);
 
       try {
-        console.log('开始检查用户现有游戏...');
-        const userGames = await gameService.getUserGames();
-        console.log('获取到用户游戏列表:', userGames);
+        await loadGame(gameId);
+        console.log('游戏加载成功');
+      } catch (error: any) {
+        console.error('加载游戏失败:', error);
+        addNotification({
+          type: 'error',
+          title: '加载失败',
+          message: error.message || '无法加载游戏，请返回游戏列表',
+        });
 
-        // 查找进行中的游戏
-        const activeGame = userGames.find(game =>
-          game.status === 'active' || game.status === 'waiting'
-        );
-
-        if (activeGame) {
-          console.log('找到现有游戏:', activeGame);
-          await loadGame(activeGame.gameId);
-          addNotification({
-            type: 'info',
-            title: '游戏已恢复',
-            message: '已为您恢复之前的游戏进度',
-          });
-        } else {
-          console.log('未找到现有游戏，用户可以创建新游戏');
-        }
-      } catch (error) {
-        console.error('检查现有游戏失败:', error);
-        // 不显示错误通知，让用户正常创建新游戏
-      } finally {
-        console.log('检查完成，设置hasCheckedExistingGame为true');
-        setHasCheckedExistingGame(true);
+        // 3秒后自动跳转到游戏列表
+        setTimeout(() => {
+          navigate('/games');
+        }, 3000);
       }
     };
 
-    checkExistingGame();
-  }, [user?.userId, hasCheckedExistingGame, currentGame]);
+    loadSpecificGame();
+  }, [gameId, user?.userId, loadGame, navigate, addNotification]);
 
   useEffect(() => {
     // 清除错误
@@ -223,22 +191,9 @@ const GamePage: React.FC = () => {
     }
   }, [error, clearError]);
 
-  const handleCreateGame = async () => {
-    try {
-      await createGame(gameConfig);
-      addNotification({
-        type: 'success',
-        title: '游戏创建成功',
-        message: '准备开始您的深圳1980商业之旅！',
-      });
-    } catch (error) {
-      console.error('创建游戏失败:', error);
-    }
-  };
-
   const handleStartGame = async () => {
     if (!currentGame) return;
-    
+
     try {
       await startGame(currentGame.gameId);
       addNotification({
@@ -249,6 +204,10 @@ const GamePage: React.FC = () => {
     } catch (error) {
       console.error('开始游戏失败:', error);
     }
+  };
+
+  const handleBackToList = () => {
+    navigate('/games');
   };
 
   const getDifficultyName = (difficulty: string): string => {
@@ -269,73 +228,53 @@ const GamePage: React.FC = () => {
     return names[condition as keyof typeof names] || condition;
   };
 
-  // 如果正在加载或还在检查现有游戏
-  if (isLoading || !hasCheckedExistingGame) {
+  // 如果没有gameId，跳转到游戏列表
+  if (!gameId) {
+    navigate('/games');
+    return null;
+  }
+
+  // 如果正在加载
+  if (isLoading) {
     return (
       <GamePageContainer>
         <Card>
           <LoadingContainer>
             <LoadingSpinner size="large" variant="dots" />
-            <div>{!hasCheckedExistingGame ? '检查游戏状态中...' : '加载游戏中...'}</div>
+            <div>加载游戏中...</div>
           </LoadingContainer>
         </Card>
       </GamePageContainer>
     );
   }
 
-  // 如果没有游戏，显示创建游戏界面
+  // 如果没有游戏，显示错误信息
   if (!currentGame) {
     return (
       <GamePageContainer>
-        <WelcomeCard>
-          <WelcomeTitle>欢迎来到深圳1980</WelcomeTitle>
-          <WelcomeText>
-            在这个AI驱动的商业模拟游戏中，您将体验1980年代深圳的创业传奇。
-            与50个AI角色互动，建立商业帝国，成为时代的传奇人物。
-          </WelcomeText>
-          
-          <GameSetupForm>
-            <FormGroup>
-              <Label>游戏难度</Label>
-              <Select
-                value={gameConfig.difficulty}
-                onChange={(e) => setGameConfig(prev => ({
-                  ...prev,
-                  difficulty: e.target.value as any
-                }))}
-              >
-                <option value="easy">简单 - 适合新手</option>
-                <option value="standard">标准 - 平衡体验</option>
-                <option value="hard">困难 - 挑战极限</option>
-              </Select>
-            </FormGroup>
+        <Card>
+          <Card.Header>
+            <Card.Title>游戏未找到</Card.Title>
+            <Card.Subtitle>无法加载指定的游戏</Card.Subtitle>
+          </Card.Header>
 
-            <FormGroup>
-              <Label>胜利条件</Label>
-              <Select
-                value={gameConfig.winCondition}
-                onChange={(e) => setGameConfig(prev => ({
-                  ...prev,
-                  winCondition: e.target.value as any
-                }))}
-              >
-                <option value="wealth">财富积累 - 成为最富有的人</option>
-                <option value="reputation">声望建立 - 获得最高声望</option>
-                <option value="influence">影响力扩张 - 建立最大影响力</option>
-              </Select>
-            </FormGroup>
+          <Card.Content>
+            <div style={{ textAlign: 'center', padding: '2rem' }}>
+              <div style={{ marginBottom: '2rem', fontSize: '3rem' }}>😕</div>
+              <p style={{ marginBottom: '2rem', fontSize: '1.1rem' }}>
+                游戏ID "{gameId}" 不存在或您没有访问权限
+              </p>
 
-            <Button
-              variant="primary"
-              size="large"
-              onClick={handleCreateGame}
-              disabled={isLoading}
-              fullWidth
-            >
-              {isLoading ? '创建中...' : '开始新游戏'}
-            </Button>
-          </GameSetupForm>
-        </WelcomeCard>
+              <Button
+                variant="primary"
+                size="large"
+                onClick={handleBackToList}
+              >
+                返回游戏列表
+              </Button>
+            </div>
+          </Card.Content>
+        </Card>
       </GamePageContainer>
     );
   }
@@ -348,25 +287,34 @@ const GamePage: React.FC = () => {
           <Card.Header>
             <Card.Title>游戏设置</Card.Title>
             <Card.Subtitle>
-              难度: {getDifficultyName(currentGame.difficulty)} | 
+              难度: {getDifficultyName(currentGame.difficulty)} |
               胜利条件: {getWinConditionName(currentGame.winCondition)}
             </Card.Subtitle>
           </Card.Header>
-          
+
           <Card.Content>
             <div style={{ textAlign: 'center', padding: '2rem' }}>
               <p style={{ marginBottom: '2rem', fontSize: '1.1rem' }}>
                 游戏已创建，准备开始您的深圳1980商业之旅！
               </p>
-              
-              <Button
-                variant="primary"
-                size="large"
-                onClick={handleStartGame}
-                disabled={isLoading}
-              >
-                {isLoading ? '启动中...' : '开始游戏'}
-              </Button>
+
+              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                <Button
+                  variant="secondary"
+                  size="large"
+                  onClick={handleBackToList}
+                >
+                  返回列表
+                </Button>
+                <Button
+                  variant="primary"
+                  size="large"
+                  onClick={handleStartGame}
+                  disabled={isLoading}
+                >
+                  {isLoading ? '启动中...' : '开始游戏'}
+                </Button>
+              </div>
             </div>
           </Card.Content>
         </Card>
@@ -382,7 +330,7 @@ const GamePage: React.FC = () => {
           <PlayerStats />
           <ActionPanel />
         </SidePanel>
-        
+
         <MainGameArea>
           <GameBoard />
           <GameHistory />

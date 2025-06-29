@@ -2,15 +2,12 @@ import React, { useState } from 'react';
 import styled from 'styled-components';
 import { useAtom } from 'jotai';
 import { useGameStore } from '../../stores/gameStore';
-import { 
-  availableActionsAtom, 
-  selectedActionAtom, 
-  canSubmitActionAtom,
-  addNotificationAtom 
+import {
+  addNotificationAtom
 } from '../../atoms/gameAtoms';
 import { Card } from '../UI/Card';
 import { Button } from '../UI/Button';
-import { PlayerAction } from '../../types';
+import { PlayerAction, GameAction } from '../../types';
 
 const ActionContainer = styled(Card)`
   padding: ${({ theme }) => theme.spacing.md};
@@ -145,13 +142,19 @@ const EmptyState = styled.div`
 `;
 
 const ActionPanel: React.FC = () => {
-  const { submitAction, isProcessing, currentGame } = useGameStore();
-  const [availableActions] = useAtom(availableActionsAtom);
-  const [selectedAction, setSelectedAction] = useAtom(selectedActionAtom);
-  const [canSubmitAction] = useAtom(canSubmitActionAtom);
+  const { submitAction, isProcessing, currentGame, availableActions } = useGameStore();
   const [, addNotification] = useAtom(addNotificationAtom);
-  
+
+  const [selectedAction, setSelectedAction] = useState<GameAction | null>(null);
   const [reasoning, setReasoning] = useState('');
+
+  // 调试信息
+  console.log('ActionPanel状态:', {
+    isProcessing,
+    currentGameStatus: currentGame?.status,
+    availableActionsCount: availableActions?.length || 0,
+    availableActions: availableActions
+  });
 
   const handleActionSelect = (action: any) => {
     setSelectedAction(action);
@@ -182,7 +185,7 @@ const ActionPanel: React.FC = () => {
       await submitAction(playerAction);
       setSelectedAction(null);
       setReasoning('');
-      
+
       addNotification({
         type: 'success',
         title: '行动提交成功',
@@ -192,6 +195,13 @@ const ActionPanel: React.FC = () => {
       console.error('提交行动失败:', error);
     }
   };
+
+  // 计算是否可以提交行动
+  const canSubmitAction = !isProcessing &&
+                         availableActions.length > 0 &&
+                         currentGame?.status === 'active' &&
+                         selectedAction !== null &&
+                         reasoning.trim().length > 0;
 
   const getActionTypeText = (type: string): string => {
     const types = {

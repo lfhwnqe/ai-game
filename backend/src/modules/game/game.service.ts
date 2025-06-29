@@ -91,17 +91,83 @@ export class GameService {
   /**
    * 获取当前游戏状态
    */
-  async getCurrentGameState(gameId: string): Promise<GameState> {
+  async getCurrentGameState(gameId: string): Promise<any> {
     const game = await this.getGame(gameId);
     const gameState = await this.gameStateModel
       .findOne({ gameId, round: game.currentRound })
       .exec();
 
     if (!gameState) {
-      throw new NotFoundException(`Game state for round ${game.currentRound} not found`);
+      // 如果找不到游戏状态，创建一个默认的
+      console.log(`Game state not found for game ${gameId}, round ${game.currentRound}. Creating default state.`);
+      await this.initializeGameState(gameId, game.playerId);
+
+      // 重新查询
+      const newGameState = await this.gameStateModel
+        .findOne({ gameId, round: game.currentRound })
+        .exec();
+
+      if (!newGameState) {
+        throw new NotFoundException(`Failed to create game state for round ${game.currentRound}`);
+      }
+
+      return this.formatGameStateForFrontend(newGameState);
     }
 
-    return gameState;
+    return this.formatGameStateForFrontend(gameState);
+  }
+
+  /**
+   * 将后端游戏状态格式化为前端期望的格式
+   */
+  private formatGameStateForFrontend(gameState: any): any {
+    return {
+      gameId: gameState.gameId,
+      currentRound: gameState.round,
+      playerCharacter: {
+        characterId: 'player',
+        name: '玩家',
+        type: 'player',
+        resources: {
+          money: gameState.playerState.money,
+          reputation: gameState.playerState.reputation,
+          health: 100, // 默认值
+          connections: Object.keys(gameState.playerState.relationships || {}).length,
+        },
+        relationships: gameState.playerState.relationships || {},
+        status: 'active',
+        location: '深圳',
+        description: '1980年代的创业者',
+        history: [],
+      },
+      marketCondition: this.getMarketCondition(gameState.marketState),
+      recentEvents: (gameState.activeEvents || []).map(event => ({
+        eventId: event.eventId,
+        eventType: event.type as any,
+        title: event.title,
+        description: event.description,
+        impact: event.effects,
+        timestamp: new Date().toISOString(),
+      })),
+      availableActions: gameState.availableActions || [],
+    };
+  }
+
+  /**
+   * 根据市场状态确定市场条件
+   */
+  private getMarketCondition(marketState: any): 'boom' | 'stable' | 'recession' {
+    // 简单的市场条件判断逻辑
+    const inflationRate = marketState.inflationRate || 0.03;
+    const interestRates = marketState.interestRates || 0.05;
+
+    if (inflationRate < 0.02 && interestRates < 0.04) {
+      return 'boom';
+    } else if (inflationRate > 0.05 || interestRates > 0.08) {
+      return 'recession';
+    } else {
+      return 'stable';
+    }
   }
 
   /**
@@ -277,19 +343,63 @@ export class GameService {
    * 生成可用行动
    */
   private async generateAvailableActions(gameId: string, round: number): Promise<any[]> {
-    // TODO: 根据游戏状态生成可用行动
+    // 根据游戏状态生成可用行动
     return [
       {
-        actionId: 'business_invest',
-        type: 'business',
-        name: '商业投资',
-        description: '投资一个商业项目',
-        requirements: { money: 10000 },
-        costs: { money: 10000, actionPoints: 1 },
-        risks: { failure: 0.3 },
-        potentialRewards: { money: 20000, reputation: 10 },
+        actionId: 'business_invest_small',
+        actionType: 'business',
+        actionName: '小额投资',
+        description: '投资一个小型商业项目，风险较低但收益有限',
+        requirements: {
+          minMoney: 5000,
+          minReputation: 0,
+        },
+        effects: {
+          moneyChange: -5000,
+          reputationChange: 5,
+        },
       },
-      // 更多行动...
+      {
+        actionId: 'social_networking',
+        actionType: 'social',
+        actionName: '社交活动',
+        description: '参加商业聚会，扩展人脉关系',
+        requirements: {
+          minMoney: 1000,
+          minReputation: 10,
+        },
+        effects: {
+          moneyChange: -1000,
+          reputationChange: 10,
+        },
+      },
+      {
+        actionId: 'personal_study',
+        actionType: 'personal',
+        actionName: '学习提升',
+        description: '学习商业知识，提升个人能力',
+        requirements: {
+          minMoney: 500,
+        },
+        effects: {
+          moneyChange: -500,
+          reputationChange: 3,
+        },
+      },
+      {
+        actionId: 'investment_stocks',
+        actionType: 'investment',
+        actionName: '股票投资',
+        description: '投资股票市场，高风险高收益',
+        requirements: {
+          minMoney: 10000,
+          minReputation: 20,
+        },
+        effects: {
+          moneyChange: -10000,
+          reputationChange: 2,
+        },
+      },
     ];
   }
 

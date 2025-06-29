@@ -8,6 +8,8 @@ import GlobalStyle from './styles/GlobalStyle';
 // Pages
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import GameListPage from './pages/GameListPage';
+import GameCreatePage from './pages/GameCreatePage';
 import GamePage from './pages/GamePage';
 import TestGamePage from './pages/TestGamePage';
 import CharactersPage from './pages/CharactersPage';
@@ -36,10 +38,10 @@ const App: React.FC = () => {
           <Routes>
             {/* 公开路由 */}
             <Route path="/login" element={
-              isAuthenticated ? <Navigate to="/game" replace /> : <LoginPage />
+              isAuthenticated ? <Navigate to="/games" replace /> : <LoginPage />
             } />
             <Route path="/register" element={
-              isAuthenticated ? <Navigate to="/game" replace /> : <RegisterPage />
+              isAuthenticated ? <Navigate to="/games" replace /> : <RegisterPage />
             } />
 
             {/* 受保护的路由 */}
@@ -52,10 +54,20 @@ const App: React.FC = () => {
                 <Navigate to="/login" replace />
               )
             }>
-              <Route index element={<Navigate to="/game" replace />} />
-              <Route path="game" element={
+              <Route index element={<Navigate to="/games" replace />} />
+              <Route path="games" element={
                 <ErrorBoundary>
-                  <TestGamePage />
+                  <GameListPage />
+                </ErrorBoundary>
+              } />
+              <Route path="game/create" element={
+                <ErrorBoundary>
+                  <GameCreatePage />
+                </ErrorBoundary>
+              } />
+              <Route path="game/:gameId" element={
+                <ErrorBoundary>
+                  <GamePage />
                 </ErrorBoundary>
               } />
               <Route path="characters" element={
@@ -72,7 +84,7 @@ const App: React.FC = () => {
 
             {/* 404 重定向 */}
             <Route path="*" element={
-              <Navigate to={isAuthenticated ? "/game" : "/login"} replace />
+              <Navigate to={isAuthenticated ? "/games" : "/login"} replace />
             } />
           </Routes>
         </Router>

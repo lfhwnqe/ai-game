@@ -137,9 +137,9 @@ interface NavItemData {
 
 const navItems: NavItemData[] = [
   {
-    path: '/game',
+    path: '/games',
     icon: '🎮',
-    text: '游戏',
+    text: '游戏列表',
     key: 'game',
   },
   {
@@ -186,9 +186,10 @@ const Sidebar: React.FC = () => {
     <SidebarContainer>
       <NavList>
         {navItems.map((item) => {
-          const isActive = location.pathname === item.path || 
-                          (item.path === '/game' && location.pathname === '/');
-          
+          const isActive = location.pathname === item.path ||
+                          (item.path === '/games' && location.pathname === '/') ||
+                          (item.path === '/games' && location.pathname.startsWith('/game'));
+
           return (
             <NavItem
               key={item.key}
