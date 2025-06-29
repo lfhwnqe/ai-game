@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const neo4j = require('neo4j-driver');
+const bcrypt = require('bcryptjs');
 const { charactersData } = require('../data/characters-data');
 const { relationshipsData } = require('../data/relationships-data');
 require('dotenv').config();
@@ -49,6 +50,35 @@ async function initMongoDB() {
       createdAt: new Date()
     });
     console.log('✅ 插入游戏配置');
+
+    // 创建初始用户
+    console.log('🔄 创建初始用户...');
+    const saltRounds = 12;
+    const passwordHash = await bcrypt.hash('admin123', saltRounds);
+
+    await db.collection('users').insertOne({
+      userId: `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      username: 'admin',
+      email: 'admin@aigame.com',
+      passwordHash: passwordHash,
+      profile: {
+        displayName: '管理员',
+        avatar: null,
+        bio: '系统管理员'
+      },
+      gameStats: {
+        gamesPlayed: 0,
+        gamesWon: 0,
+        totalPlayTime: 0,
+        achievements: []
+      },
+      activeGames: [],
+      status: 'active',
+      role: 'admin',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
+    console.log('✅ 创建初始用户 (用户名: admin, 密码: admin123)');
 
     // 创建角色数据
     console.log('🔄 创建角色数据...');
@@ -112,9 +142,10 @@ async function initNeo4j() {
           profession: character.profession,
           type: character.type,
           age: character.age,
-          personality: character.personality,
-          resources: character.resources,
-          skills: character.skills,
+          // 将复杂对象转换为JSON字符串
+          personality: JSON.stringify(character.personality),
+          resources: JSON.stringify(character.resources),
+          skills: JSON.stringify(character.skills),
         }
       );
     }
@@ -143,7 +174,8 @@ async function initNeo4j() {
           strength: relationship.strength,
           trust: relationship.trust,
           respect: relationship.respect,
-          attributes: relationship.attributes,
+          // 将复杂对象转换为JSON字符串
+          attributes: JSON.stringify(relationship.attributes || {}),
         }
       );
     }
